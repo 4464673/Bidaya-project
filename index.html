@@ -298,6 +298,90 @@
             margin-top: 8px;
         }
 
+        /* --- CLASS PORTAL (role select / create / join / upload) --- */
+        .portal-box {
+            max-width: 480px;
+            margin: 0 auto 40px auto;
+            background-color: #16281f;
+            border: 1px solid #23392c;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .portal-box h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        .role-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .role-btn {
+            background-color: var(--accent-gold);
+            color: #11221b;
+            border: none;
+            padding: 12px 22px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .role-btn.secondary {
+            background-color: transparent;
+            border: 1px solid var(--accent-gold);
+            color: var(--text-gold);
+        }
+
+        .portal-input {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #2c4636;
+            background-color: #0e1c16;
+            color: var(--text-light);
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .portal-error {
+            display: none;
+            color: #ff8080;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+        .class-header-bar {
+            max-width: 900px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .leave-class-btn {
+            background: none;
+            border: 1px solid #446;
+            color: #bbb;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
         /* --- ALPHABET SECTION --- */
         .alphabet-section { background-color: #0e1c16; }
 
@@ -455,28 +539,49 @@
                 <div id="auth-error"></div>
             </div>
 
-            <h2>Available Class Materials</h2>
-            <p class="section-intro">Select a resource below to view or download.</p>
+            <!-- Step 1: shown once signed in — pick teacher or student -->
+            <div id="role-select" class="portal-box" style="display: none;">
+                <h2>Are you a teacher or a student?</h2>
+                <div class="role-buttons">
+                    <button id="role-teacher-btn" class="role-btn">I'm a Teacher</button>
+                    <button id="role-student-btn" class="role-btn">I'm a Student</button>
+                </div>
+            </div>
 
-            <div class="cards-grid">
-                <div class="card">
-                    <h3>Syllabus & Guidelines</h3>
-                    <p>Overview of the course schedule, grading, and expectations.</p>
-                    <button class="card-btn" data-label="Syllabus & Guidelines">Open Document</button>
-                    <div class="card-note">Coming soon — this document hasn't been uploaded yet.</div>
+            <!-- Teacher: create a class -->
+            <div id="teacher-create" class="portal-box" style="display: none;">
+                <h2>Create your class</h2>
+                <input type="text" id="create-class-name" placeholder="Class name" class="portal-input">
+                <input type="password" id="create-class-password" placeholder="Set a password" class="portal-input">
+                <button id="create-class-btn" class="card-btn">Create Class</button>
+                <div id="create-class-error" class="portal-error"></div>
+            </div>
+
+            <!-- Student: join a class -->
+            <div id="student-join" class="portal-box" style="display: none;">
+                <h2>Join a class</h2>
+                <input type="text" id="join-class-name" placeholder="Class name" class="portal-input">
+                <input type="password" id="join-class-password" placeholder="Class password" class="portal-input">
+                <button id="join-class-btn" class="card-btn">Join Class</button>
+                <div id="join-class-error" class="portal-error"></div>
+            </div>
+
+            <!-- Teacher-only: add a material -->
+            <div id="teacher-upload" class="portal-box" style="display: none;">
+                <h2>Add class material</h2>
+                <input type="text" id="material-title" placeholder="Title (e.g. Week 2 Readings)" class="portal-input">
+                <input type="url" id="material-link" placeholder="Link (Google Drive, YouTube, etc.)" class="portal-input">
+                <button id="add-material-btn" class="card-btn">Upload File</button>
+                <div id="material-error" class="portal-error"></div>
+            </div>
+
+            <div id="class-materials-section" style="display: none;">
+                <h2 id="materials-heading">Available Class Materials</h2>
+                <p class="section-intro">Select a resource below to view or download.</p>
+                <div class="cards-grid" id="materials-grid">
+                    <!-- Filled in by JS from Firestore -->
                 </div>
-                <div class="card">
-                    <h3>Week 1 Readings</h3>
-                    <p>Introductory texts and foundational study notes.</p>
-                    <button class="card-btn" data-label="Week 1 Readings">Download PDF</button>
-                    <div class="card-note">Coming soon — this document hasn't been uploaded yet.</div>
-                </div>
-                <div class="card">
-                    <h3>Class Recording Links</h3>
-                    <p>Video links and archives for previous class sessions.</p>
-                    <button class="card-btn" data-label="Class Recording Links">View Recordings</button>
-                    <div class="card-note">Coming soon — this document hasn't been uploaded yet.</div>
-                </div>
+                <p id="no-materials-msg" style="display: none; color: #bbb;">No materials uploaded yet. Check back soon.</p>
             </div>
         </div>
     </section>
@@ -505,6 +610,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // Config integrated directly from your project
         const firebaseConfig = {
@@ -549,7 +655,7 @@
         }
 
         function initAuth() {
-            let app, auth, provider;
+            let app, auth, provider, db;
 
             // BUG FIX #2: initializeApp/getAuth can throw (bad config, network
             // blocked, etc.) and previously nothing caught that — the button and
@@ -558,6 +664,7 @@
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 provider = new GoogleAuthProvider();
+                db = getFirestore(app);
             } catch (error) {
                 console.error("Firebase failed to initialize:", error);
                 welcomeTitle.textContent = "Sign-in is unavailable";
@@ -632,6 +739,9 @@
                     centerBtn.textContent = "Sign Out";
                     centerBtn.classList.add("btn-signout");
                     centerBtn.onclick = handleSignOut;
+
+                    // Now that they're signed in, show the teacher/student portal.
+                    showRoleSelect();
                 } else {
                     welcomeTitle.textContent = "Sign in to your account";
                     welcomeSubtitle.textContent = "Sign in with your real Google account to access class materials.";
@@ -643,11 +753,227 @@
                     centerBtn.textContent = "Sign in with Google";
                     centerBtn.classList.add("btn-signin");
                     centerBtn.onclick = handleSignIn;
+
+                    // Signed out — hide the whole class portal.
+                    hideAllPortalBoxes();
                 }
 
                 navAuthContainer.appendChild(navBtn);
                 centerAuthContainer.appendChild(centerBtn);
             });
+
+            // ---------- CLASS PORTAL: role select / create / join / materials ----------
+
+            const roleSelectBox = document.getElementById("role-select");
+            const teacherCreateBox = document.getElementById("teacher-create");
+            const studentJoinBox = document.getElementById("student-join");
+            const teacherUploadBox = document.getElementById("teacher-upload");
+            const materialsSection = document.getElementById("class-materials-section");
+            const materialsGrid = document.getElementById("materials-grid");
+            const materialsHeading = document.getElementById("materials-heading");
+            const noMaterialsMsg = document.getElementById("no-materials-msg");
+
+            let currentClassId = null;
+            let currentIsTeacher = false;
+            let unsubscribeMaterials = null;
+
+            function hideAllPortalBoxes() {
+                [roleSelectBox, teacherCreateBox, studentJoinBox, teacherUploadBox, materialsSection].forEach(el => {
+                    if (el) el.style.display = "none";
+                });
+                if (unsubscribeMaterials) {
+                    unsubscribeMaterials();
+                    unsubscribeMaterials = null;
+                }
+                currentClassId = null;
+            }
+
+            function showRoleSelect() {
+                hideAllPortalBoxes();
+                roleSelectBox.style.display = "block";
+            }
+
+            document.getElementById("role-teacher-btn").addEventListener("click", () => {
+                hideAllPortalBoxes();
+                teacherCreateBox.style.display = "block";
+            });
+
+            document.getElementById("role-student-btn").addEventListener("click", () => {
+                hideAllPortalBoxes();
+                studentJoinBox.style.display = "block";
+            });
+
+            // Turns "My Class 1" into a safe Firestore document ID like "my-class-1"
+            function slugifyClassName(name) {
+                return name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, "");
+            }
+
+            // --- Teacher: create a class ---
+            document.getElementById("create-class-btn").addEventListener("click", async () => {
+                const nameInput = document.getElementById("create-class-name");
+                const passInput = document.getElementById("create-class-password");
+                const errorBox = document.getElementById("create-class-error");
+                errorBox.style.display = "none";
+
+                const className = nameInput.value.trim();
+                const password = passInput.value;
+                const classId = slugifyClassName(className);
+
+                if (!className || !password) {
+                    errorBox.textContent = "Please enter both a class name and a password.";
+                    errorBox.style.display = "block";
+                    return;
+                }
+
+                try {
+                    const classRef = doc(db, "classes", classId);
+                    const existing = await getDoc(classRef);
+                    if (existing.exists()) {
+                        errorBox.textContent = "A class with this name already exists. Pick a different name, or join it as a student instead.";
+                        errorBox.style.display = "block";
+                        return;
+                    }
+
+                    await setDoc(classRef, {
+                        className: className,
+                        password: password,
+                        teacherUid: auth.currentUser.uid,
+                        teacherName: auth.currentUser.displayName || "Teacher",
+                        createdAt: Date.now()
+                    });
+
+                    enterClass(classId, className, true);
+                } catch (error) {
+                    console.error("Create class failed:", error);
+                    errorBox.textContent = "Couldn't create the class. Make sure Firestore is enabled in your Firebase project.";
+                    errorBox.style.display = "block";
+                }
+            });
+
+            // --- Student: join a class ---
+            document.getElementById("join-class-btn").addEventListener("click", async () => {
+                const nameInput = document.getElementById("join-class-name");
+                const passInput = document.getElementById("join-class-password");
+                const errorBox = document.getElementById("join-class-error");
+                errorBox.style.display = "none";
+
+                const className = nameInput.value.trim();
+                const password = passInput.value;
+                const classId = slugifyClassName(className);
+
+                if (!className || !password) {
+                    errorBox.textContent = "Please enter both the class name and password.";
+                    errorBox.style.display = "block";
+                    return;
+                }
+
+                try {
+                    const classRef = doc(db, "classes", classId);
+                    const snap = await getDoc(classRef);
+
+                    if (!snap.exists()) {
+                        errorBox.textContent = "No class found with that name. Double check with your teacher.";
+                        errorBox.style.display = "block";
+                        return;
+                    }
+
+                    if (snap.data().password !== password) {
+                        errorBox.textContent = "Wrong password. Double check with your teacher.";
+                        errorBox.style.display = "block";
+                        return;
+                    }
+
+                    enterClass(classId, snap.data().className, false);
+                } catch (error) {
+                    console.error("Join class failed:", error);
+                    errorBox.textContent = "Couldn't join the class. Make sure Firestore is enabled in your Firebase project.";
+                    errorBox.style.display = "block";
+                }
+            });
+
+            // --- Shared: enter a class as either teacher or student ---
+            function enterClass(classId, className, isTeacher) {
+                hideAllPortalBoxes();
+                currentClassId = classId;
+                currentIsTeacher = isTeacher;
+
+                materialsHeading.textContent = `Available Class Materials — ${className}`;
+                materialsSection.style.display = "block";
+                if (isTeacher) {
+                    teacherUploadBox.style.display = "block";
+                }
+
+                const materialsRef = collection(db, "classes", classId, "materials");
+                const materialsQuery = query(materialsRef, orderBy("uploadedAt", "desc"));
+
+                unsubscribeMaterials = onSnapshot(materialsQuery, (snapshot) => {
+                    materialsGrid.innerHTML = "";
+                    if (snapshot.empty) {
+                        noMaterialsMsg.style.display = "block";
+                        return;
+                    }
+                    noMaterialsMsg.style.display = "none";
+
+                    snapshot.forEach((docSnap) => {
+                        const data = docSnap.data();
+                        const card = document.createElement("div");
+                        card.className = "card";
+                        card.innerHTML = `
+                            <h3>${escapeHtml(data.title)}</h3>
+                            <p>Uploaded by ${escapeHtml(data.uploadedByName || "Teacher")}</p>
+                            <a href="${escapeHtml(data.link)}" target="_blank" rel="noopener" class="card-btn">Open / Download</a>
+                        `;
+                        materialsGrid.appendChild(card);
+                    });
+                }, (error) => {
+                    console.error("Loading materials failed:", error);
+                });
+            }
+
+            // --- Teacher: add a material (a real link, works immediately) ---
+            document.getElementById("add-material-btn").addEventListener("click", async () => {
+                const titleInput = document.getElementById("material-title");
+                const linkInput = document.getElementById("material-link");
+                const errorBox = document.getElementById("material-error");
+                errorBox.style.display = "none";
+
+                const title = titleInput.value.trim();
+                const link = linkInput.value.trim();
+
+                if (!title || !link) {
+                    errorBox.textContent = "Please enter both a title and a link.";
+                    errorBox.style.display = "block";
+                    return;
+                }
+                if (!currentClassId) {
+                    errorBox.textContent = "No class selected.";
+                    errorBox.style.display = "block";
+                    return;
+                }
+
+                try {
+                    const materialsRef = collection(db, "classes", currentClassId, "materials");
+                    await addDoc(materialsRef, {
+                        title: title,
+                        link: link,
+                        uploadedByName: auth.currentUser.displayName || "Teacher",
+                        uploadedAt: Date.now()
+                    });
+                    titleInput.value = "";
+                    linkInput.value = "";
+                } catch (error) {
+                    console.error("Add material failed:", error);
+                    errorBox.textContent = "Couldn't add this material. Make sure Firestore is enabled in your Firebase project.";
+                    errorBox.style.display = "block";
+                }
+            });
+
+            // Basic escaping so a class name/title/link can't inject HTML into the page.
+            function escapeHtml(str) {
+                const div = document.createElement("div");
+                div.textContent = str;
+                return div.innerHTML;
+            }
         } // end initAuth()
 
         // Card buttons: show a "coming soon" note instead of a dead link
