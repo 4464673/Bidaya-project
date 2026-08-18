@@ -576,7 +576,10 @@
             </div>
 
             <div id="class-materials-section" style="display: none;">
-                <h2 id="materials-heading">Available Class Materials</h2>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <h2 id="materials-heading" style="margin:0;">Available Class Materials</h2>
+                    <button id="switch-class-btn" class="card-btn" style="background:transparent; border:1px solid var(--accent-gold); color:var(--text-gold);">Switch Class</button>
+                </div>
                 <p class="section-intro">Select a resource below to view or download.</p>
                 <div class="cards-grid" id="materials-grid">
                     <!-- Filled in by JS from Firestore -->
@@ -740,8 +743,9 @@
                     centerBtn.classList.add("btn-signout");
                     centerBtn.onclick = handleSignOut;
 
-                    // Now that they're signed in, show the teacher/student portal.
-                    showRoleSelect();
+                    // Now that they're signed in, either jump back into their last
+                    // class automatically, or show the role picker if there isn't one.
+                    tryResumeLastClass();
                 } else {
                     welcomeTitle.textContent = "Sign in to your account";
                     welcomeSubtitle.textContent = "Sign in with your real Google account to access class materials.";
@@ -776,6 +780,40 @@
             let currentClassId = null;
             let currentIsTeacher = false;
             let unsubscribeMaterials = null;
+
+            // ---------- remember the last class the user was in, so a sign-out/sign-in
+            // (or just refreshing the page) doesn't dump them back at the role picker ----------
+            const LAST_CLASS_KEY = "bidaya_last_class";
+
+            function rememberActiveClass(classId, className, isTeacher) {
+                try {
+                    localStorage.setItem(LAST_CLASS_KEY, JSON.stringify({ classId, className, isTeacher }));
+                } catch (err) {
+                    console.error("Couldn't remember active class:", err);
+                }
+            }
+
+            function forgetActiveClass() {
+                try {
+                    localStorage.removeItem(LAST_CLASS_KEY);
+                } catch (err) {
+                    console.error("Couldn't clear remembered class:", err);
+                }
+            }
+
+            function tryResumeLastClass() {
+                let saved;
+                try {
+                    const raw = localStorage.getItem(LAST_CLASS_KEY);
+                    if (!raw) { showRoleSelect(); return; }
+                    saved = JSON.parse(raw);
+                } catch (err) {
+                    showRoleSelect();
+                    return;
+                }
+                if (!saved || !saved.classId) { showRoleSelect(); return; }
+                enterClass(saved.classId, saved.className, saved.isTeacher);
+            }
 
             function hideAllPortalBoxes() {
                 [roleSelectBox, teacherCreateBox, studentJoinBox, teacherUploadBox, materialsSection].forEach(el => {
@@ -896,6 +934,7 @@
                 hideAllPortalBoxes();
                 currentClassId = classId;
                 currentIsTeacher = isTeacher;
+                rememberActiveClass(classId, className, isTeacher);
 
                 materialsHeading.textContent = `Available Class Materials — ${className}`;
                 materialsSection.style.display = "block";
@@ -929,6 +968,11 @@
                     console.error("Loading materials failed:", error);
                 });
             }
+
+            document.getElementById("switch-class-btn").addEventListener("click", () => {
+                forgetActiveClass();
+                showRoleSelect();
+            });
 
             // --- Teacher: add a material (a real link, works immediately) ---
             document.getElementById("add-material-btn").addEventListener("click", async () => {
